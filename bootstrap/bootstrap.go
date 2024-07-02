@@ -33,10 +33,13 @@ import (
 	"github.com/edgexfoundry/go-mod-bootstrap/v3/bootstrap/secret"
 	"github.com/edgexfoundry/go-mod-bootstrap/v3/bootstrap/startup"
 	"github.com/edgexfoundry/go-mod-bootstrap/v3/bootstrap/utils"
+	"github.com/edgexfoundry/go-mod-bootstrap/v3/bootstrap/zerotrust"
+	boorstrapConfig "github.com/edgexfoundry/go-mod-bootstrap/v3/config"
 	"github.com/edgexfoundry/go-mod-bootstrap/v3/di"
 
 	"github.com/edgexfoundry/go-mod-registry/v3/registry"
 
+	clientsinterfaces "github.com/edgexfoundry/go-mod-core-contracts/v3/clients/interfaces"
 	"github.com/edgexfoundry/go-mod-core-contracts/v3/clients/logger"
 	"github.com/edgexfoundry/go-mod-core-contracts/v3/models"
 )
@@ -122,11 +125,27 @@ func RunAndReturnWaitGroup(
 		}
 	}
 
+	var jwtSecretProvider clientsinterfaces.AuthenticationInjector
+	if secretProvider != nil {
+		serviceInfo := boorstrapConfig.ServiceInfo{
+			Host:            "test",
+			SecurityOptions: make(map[string]string),
+		}
+		serviceInfo.SecurityOptions[zerotrust.OpenZitiControllerKey] = "openziti:1280"
+		jwtSecretProvider = secret.NewJWTSecretProvider(secretProvider)
+		roundTripper, err := zerotrust.HttpTransportFromService(secretProvider, serviceInfo, lc)
+		if err != nil {
+			lc.Warnf("unable to set HttpTransport due to unexpected error: %v", err)
+		} else {
+			secretProvider.SetHttpTransport(roundTripper)
+		}
+	}
+
 	// The SecretProvider is initialized and placed in the DIS as part of processing the configuration due
 	// to the need for it to be used to get Access Token for the Configuration Provider and having to wait to
 	// initialize it until after the configuration is loaded from file.
 	configProcessor := config.NewProcessor(commonFlags, envVars, startupTimer, ctx, &wg, configUpdated, dic)
-	if err := configProcessor.Process(serviceKey, serviceType, configStem, serviceConfig, secretProvider, secret.NewJWTSecretProvider(secretProvider)); err != nil {
+	if err := configProcessor.Process(serviceKey, serviceType, configStem, serviceConfig, secretProvider, jwtSecretProvider); err != nil {
 		fatalError(err, lc)
 	}
 

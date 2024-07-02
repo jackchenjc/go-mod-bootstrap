@@ -21,7 +21,6 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/edgexfoundry/go-mod-bootstrap/v3/bootstrap/secret"
 	"github.com/edgexfoundry/go-mod-core-contracts/v3/clients/logger"
 	"github.com/edgexfoundry/go-mod-core-contracts/v3/common"
 
@@ -30,9 +29,12 @@ import (
 
 	"github.com/edgexfoundry/go-mod-bootstrap/v3/bootstrap/container"
 	"github.com/edgexfoundry/go-mod-bootstrap/v3/bootstrap/interfaces"
+	"github.com/edgexfoundry/go-mod-bootstrap/v3/bootstrap/secret"
 	"github.com/edgexfoundry/go-mod-bootstrap/v3/bootstrap/startup"
+	"github.com/edgexfoundry/go-mod-bootstrap/v3/bootstrap/zerotrust"
 	"github.com/edgexfoundry/go-mod-bootstrap/v3/config"
 	"github.com/edgexfoundry/go-mod-bootstrap/v3/di"
+	clientsinterfaces "github.com/edgexfoundry/go-mod-core-contracts/v3/clients/interfaces"
 )
 
 // createRegistryClient creates and returns a registry.Client instance.
@@ -46,6 +48,7 @@ func createRegistryClient(
 	var err error
 	var accessToken string
 	var getAccessToken registryTypes.GetAccessTokenCallback
+	var jwtSecretProvider clientsinterfaces.AuthenticationInjector
 
 	secretProvider := container.SecretProviderExtFrom(dic.Get)
 	// secretProvider will be nil if not configured to be used. In that case, no access token required.
@@ -68,6 +71,19 @@ func createRegistryClient(
 		if err != nil {
 			return nil, err
 		}
+
+		jwtSecretProvider = secret.NewJWTSecretProvider(secretProvider)
+		serviceInfo := config.ServiceInfo{
+			Host:            "test",
+			SecurityOptions: make(map[string]string),
+		}
+		serviceInfo.SecurityOptions[zerotrust.OpenZitiControllerKey] = "openziti:1280"
+		roundTripper, err := zerotrust.HttpTransportFromService(secretProvider, serviceInfo, lc)
+		if err != nil {
+			lc.Warnf("unable to set HttpTransport due to unexpected error: %v", err)
+		} else {
+			secretProvider.SetHttpTransport(roundTripper)
+		}
 	}
 
 	if len(bootstrapConfig.Registry.Host) == 0 || bootstrapConfig.Registry.Port == 0 || len(bootstrapConfig.Registry.Type) == 0 {
@@ -86,7 +102,7 @@ func createRegistryClient(
 		CheckInterval:   bootstrapConfig.Service.HealthCheckInterval,
 		CheckRoute:      common.ApiPingRoute,
 		GetAccessToken:  getAccessToken,
-		AuthInjector:    secret.NewJWTSecretProvider(secretProvider),
+		AuthInjector:    jwtSecretProvider,
 	}
 
 	lc.Info(fmt.Sprintf("Using Registry (%s) from %s", registryConfig.Type, registryConfig.GetRegistryUrl()))
