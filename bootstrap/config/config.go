@@ -841,6 +841,7 @@ func (cp *Processor) listenForPrivateChanges(serviceConfig interfaces.Configurat
 				lc.Errorf("error occurred during listening to the configuration changes: %s", ex.Error())
 
 			case raw, ok := <-updateStream:
+				fmt.Println("844: ", raw, ok)
 				if !ok {
 					return
 				}
@@ -855,7 +856,7 @@ func (cp *Processor) listenForPrivateChanges(serviceConfig interfaces.Configurat
 					lc.Errorf("failed to remove unused private settings in %s: %v", writableKey, err)
 				}
 
-				fmt.Println(rawMap)
+				fmt.Println("859: ", rawMap)
 
 				// Config Provider sends an update as soon as the watcher is connected even though there are not
 				// any changes to the configuration. This causes an issue during start-up if there is an
@@ -920,6 +921,7 @@ func (cp *Processor) listenForCommonChanges(fullServiceConfig interfaces.Configu
 				lc.Errorf("error occurred during listening to the configuration changes: %s", ex.Error())
 
 			case raw, ok := <-updateStream:
+				fmt.Println("924: ", raw, ok)
 				if !ok {
 					return
 				}
@@ -935,6 +937,8 @@ func (cp *Processor) listenForCommonChanges(fullServiceConfig interfaces.Configu
 				if err != nil {
 					lc.Errorf("failed to remove unused common settings in %s: %v", writableKey, err)
 				}
+
+				fmt.Println("941: ", rawMap)
 
 				// Config Provider sends an update as soon as the watcher is connected even though there are not
 				// any changes to the configuration. This causes an issue during start-up if there is an
