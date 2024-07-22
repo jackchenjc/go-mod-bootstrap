@@ -855,6 +855,8 @@ func (cp *Processor) listenForPrivateChanges(serviceConfig interfaces.Configurat
 					lc.Errorf("failed to remove unused private settings in %s: %v", writableKey, err)
 				}
 
+				fmt.Println(rawMap)
+
 				// Config Provider sends an update as soon as the watcher is connected even though there are not
 				// any changes to the configuration. This causes an issue during start-up if there is an
 				// envVars override of one of the Writable fields, so we must ignore the first update.
