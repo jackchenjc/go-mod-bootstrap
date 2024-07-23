@@ -19,6 +19,7 @@ package bootstrap
 import (
 	"context"
 	"fmt"
+	"net"
 	"net/http"
 	"os"
 	"os/signal"
@@ -128,6 +129,7 @@ func RunAndReturnWaitGroup(
 			// Bypass the zero trust zitidfied transport for Core Keeper Registry client
 			// Should leverage the HttpTransportFromService function from zerotrust pkg, set the default transport for now
 			secretProvider.SetHttpTransport(http.DefaultTransport)
+			secretProvider.SetFallbackDialer(&net.Dialer{})
 		}
 	}
 

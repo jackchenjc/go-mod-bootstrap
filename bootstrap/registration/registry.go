@@ -20,6 +20,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net"
 	"net/http"
 
 	"github.com/edgexfoundry/go-mod-core-contracts/v3/clients/logger"
@@ -74,6 +75,7 @@ func createRegistryClient(
 			// Bypass the zero trust zitidfied transport for Core Keeper Registry client
 			// Should leverage the HttpTransportFromService function from zerotrust pkg, set the default transport for now
 			secretProvider.SetHttpTransport(http.DefaultTransport)
+			secretProvider.SetFallbackDialer(&net.Dialer{})
 		}
 	}
 
