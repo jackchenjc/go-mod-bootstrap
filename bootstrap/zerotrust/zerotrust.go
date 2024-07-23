@@ -11,6 +11,7 @@ import (
 	"net"
 	"net/http"
 	"strings"
+	"time"
 )
 
 const (
@@ -48,7 +49,7 @@ func AuthToOpenZiti(ozController, jwt string) (ziti.Context, error) {
 	return ctx, nil
 }
 
-func HttpTransportFromService(secretProvider interfaces.SecretProviderExt, serviceInfo config.ServiceInfo, lc logger.LoggingClient) (http.RoundTripper, error) {
+func HttpTransportFromService(secretProvider interfaces.SecretProviderExt, serviceInfo config.ServiceInfo, lc logger.LoggingClient, fallback *net.Dialer) (http.RoundTripper, error) {
 	roundTripper := http.DefaultTransport
 	if secretProvider.IsZeroTrustEnabled() {
 		lc.Debugf("zero trust client detected for service: %s", serviceInfo.Host)
@@ -74,6 +75,18 @@ func HttpTransportFromClient(secretProvider interfaces.SecretProviderExt, client
 	return roundTripper, nil
 }
 
+type ZitiDialer struct {
+	underlayDialer *net.Dialer
+}
+
+func (z ZitiDialer) Dial(network, address string) (net.Conn, error) {
+	dialer := net.Dialer{
+		Timeout:   5 * time.Second,
+		KeepAlive: 30 * time.Second,
+	}
+	return dialer.Dial(network, address)
+}
+
 func createZitifiedTransport(secretProvider interfaces.SecretProviderExt, ozController string) (http.RoundTripper, error) {
 	jwt, errJwt := secretProvider.GetSelfJWT()
 	if errJwt != nil {
@@ -87,9 +100,12 @@ func createZitifiedTransport(secretProvider interfaces.SecretProviderExt, ozCont
 	zitiContexts := ziti.NewSdkCollection()
 	zitiContexts.Add(ctx)
 
+	fallback := &ZitiDialer{
+		underlayDialer: secretProvider.FallbackDialer(),
+	}
 	zitiTransport := http.DefaultTransport.(*http.Transport).Clone() // copy default transport
 	zitiTransport.DialContext = func(ctx context.Context, network, addr string) (net.Conn, error) {
-		dialer := zitiContexts.NewDialerWithFallback(ctx /*&net.Dialer{}*/, nil)
+		dialer := zitiContexts.NewDialerWithFallback(ctx, fallback)
 		return dialer.Dial(network, addr)
 	}
 	return zitiTransport, nil

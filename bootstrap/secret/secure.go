@@ -20,6 +20,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net"
 	"net/http"
 	"os"
 	"strings"
@@ -69,6 +70,7 @@ type SecureProvider struct {
 	securityRuntimeSecretTokenDuration gometrics.Timer
 	securityGetSecretDuration          gometrics.Timer
 	httpRoundTripper                   http.RoundTripper
+	fallbackDialer                     *net.Dialer
 	zeroTrustEnabled                   bool
 }
 
@@ -495,6 +497,18 @@ func (p *SecureProvider) HttpTransport() http.RoundTripper {
 func (p *SecureProvider) SetHttpTransport(rt http.RoundTripper) {
 	if p.httpRoundTripper == nil {
 		p.httpRoundTripper = rt
+	} else {
+		p.lc.Warnf("refusing to override httpRoundTripper, already set")
+	}
+}
+
+func (p *SecureProvider) FallbackDialer() *net.Dialer {
+	return p.fallbackDialer
+}
+
+func (p *SecureProvider) SetFallbackDialer(dialer *net.Dialer) {
+	if p.fallbackDialer == nil {
+		p.fallbackDialer = dialer
 	} else {
 		p.lc.Warnf("refusing to override httpRoundTripper, already set")
 	}
