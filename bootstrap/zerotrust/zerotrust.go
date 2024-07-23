@@ -11,7 +11,6 @@ import (
 	"net"
 	"net/http"
 	"strings"
-	"time"
 )
 
 const (
@@ -80,11 +79,7 @@ type ZitiDialer struct {
 }
 
 func (z ZitiDialer) Dial(network, address string) (net.Conn, error) {
-	dialer := net.Dialer{
-		Timeout:   5 * time.Second,
-		KeepAlive: 30 * time.Second,
-	}
-	return dialer.Dial(network, address)
+	return z.underlayDialer.Dial(network, address)
 }
 
 func createZitifiedTransport(secretProvider interfaces.SecretProviderExt, ozController string) (http.RoundTripper, error) {
