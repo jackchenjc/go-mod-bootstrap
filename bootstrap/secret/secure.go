@@ -510,7 +510,7 @@ func (p *SecureProvider) SetFallbackDialer(dialer *net.Dialer) {
 	if p.fallbackDialer == nil {
 		p.fallbackDialer = dialer
 	} else {
-		p.lc.Warnf("refusing to override httpRoundTripper, already set")
+		p.lc.Warnf("refusing to override fallbackDialer, already set")
 	}
 }
 
