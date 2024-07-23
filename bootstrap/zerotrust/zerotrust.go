@@ -49,7 +49,7 @@ func AuthToOpenZiti(ozController, jwt string) (ziti.Context, error) {
 	return ctx, nil
 }
 
-func HttpTransportFromService(secretProvider interfaces.SecretProviderExt, serviceInfo config.ServiceInfo, lc logger.LoggingClient, fallback *net.Dialer) (http.RoundTripper, error) {
+func HttpTransportFromService(secretProvider interfaces.SecretProviderExt, serviceInfo config.ServiceInfo, lc logger.LoggingClient) (http.RoundTripper, error) {
 	roundTripper := http.DefaultTransport
 	if secretProvider.IsZeroTrustEnabled() {
 		lc.Debugf("zero trust client detected for service: %s", serviceInfo.Host)
